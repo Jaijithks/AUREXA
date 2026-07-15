@@ -50,6 +50,7 @@ export default function AdminPanel({ content, onUpdate, isOpen, onClose }) {
     tag: '',
     type: '',
     image: '',
+    liveUrl: '',
   });
 
   const [newService, setNewService] = useState({
@@ -243,7 +244,7 @@ export default function AdminPanel({ content, onUpdate, isOpen, onClose }) {
       const data = await res.json();
       if (data.success) {
         onUpdate();
-        setNewProject({ name: '', category: 'business', tag: '', type: '', image: '' });
+        setNewProject({ name: '', category: 'business', tag: '', type: '', image: '', liveUrl: '' });
         showNotification('Project added successfully');
       } else {
         showNotification('Failed to add project', true);
@@ -658,6 +659,16 @@ export default function AdminPanel({ content, onUpdate, isOpen, onClose }) {
                     onChange={(e) => setNewProject({ ...newProject, type: e.target.value })}
                     style={styles.input}
                     placeholder="e.g. Gym Landing Page"
+                  />
+                </div>
+                <div style={styles.formGroup}>
+                  <label>Live Demo URL (Optional)</label>
+                  <input
+                    type="url"
+                    value={newProject.liveUrl || ''}
+                    onChange={(e) => setNewProject({ ...newProject, liveUrl: e.target.value })}
+                    style={styles.input}
+                    placeholder="e.g. https://brandx.com"
                   />
                 </div>
                 <div style={styles.formGroup}>

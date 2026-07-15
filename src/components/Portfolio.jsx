@@ -75,6 +75,17 @@ export default function Portfolio({ projects }) {
               <span className="portfolio-tag">{project.tag}</span>
               <h3 className="portfolio-name">{project.name}</h3>
               <p className="portfolio-type">{project.type}</p>
+              {project.liveUrl && (
+                <a
+                  href={project.liveUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="portfolio-live-btn"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  Live Demo ↗
+                </a>
+              )}
             </div>
           </div>
         ))}
