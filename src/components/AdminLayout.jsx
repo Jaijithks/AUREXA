@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import LoginForm from './LoginForm';
 import AdminPanel from './AdminPanel';
 
-const API_BASE = 'http://localhost:5002/api';
+const API_BASE = import.meta.env.PROD ? 'https://aurexa-admin.onrender.com/api' : 'http://localhost:5002/api';
 
 export default function AdminLayout() {
   const [auth, setAuth] = useState(false);

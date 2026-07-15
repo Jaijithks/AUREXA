@@ -11,7 +11,7 @@ import Process from '../components/Process';
 import Contact from '../components/Contact';
 import Footer from '../components/Footer';
 
-const API_BASE = 'http://localhost:5002/api';
+const API_BASE = import.meta.env.PROD ? 'https://aurexa-admin.onrender.com/api' : 'http://localhost:5002/api';
 
 export default function SiteContent() {
   const [content, setContent] = useState(null);

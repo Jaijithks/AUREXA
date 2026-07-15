@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 
-const API_BASE = 'http://localhost:5002/api';
+const API_BASE = import.meta.env.PROD ? 'https://aurexa-admin.onrender.com/api' : 'http://localhost:5002/api';
 
 const PREDEFINED_ICONS = [
   { value: 'design', label: 'Design (Pencil/Brush)' },
@@ -105,7 +105,7 @@ export default function AdminPanel({ content, onUpdate, isOpen, onClose }) {
       });
       const data = await res.json();
       if (data.success) {
-        const fullUrl = `http://localhost:5002${data.url}`;
+        const fullUrl = import.meta.env.PROD ? `https://aurexa-admin.onrender.com${data.url}` : `http://localhost:5002${data.url}`;
         if (type === 'hero') {
           setHeroForm((prev) => ({ ...prev, image: fullUrl }));
         } else if (type === 'about') {

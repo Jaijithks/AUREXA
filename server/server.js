@@ -9,14 +9,19 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-const PORT = 5002;
+const PORT = process.env.PORT || 5002;
 
 app.use(cors());
 app.use(express.json());
 
 // Setup database paths
 const DB_PATH = path.join(__dirname, 'db.json');
-const UPLOADS_DIR = path.join(__dirname, '..', 'public', 'uploads');
+
+// Check if we are running in local monorepo or deployed standalone on Render
+const localPublicDir = path.join(__dirname, '..', 'public');
+const UPLOADS_DIR = fs.existsSync(localPublicDir)
+  ? path.join(localPublicDir, 'uploads')
+  : path.join(__dirname, 'uploads');
 
 // Create uploads directory if it does not exist
 if (!fs.existsSync(UPLOADS_DIR)) {
