@@ -9,7 +9,7 @@ const PREDEFINED_ICONS = [
   { value: 'maintenance', label: 'Maintenance (Gear)' },
 ];
 
-export default function AdminPanel({ content, onUpdate, isOpen, onClose }) {
+export default function AdminPanel({ content, onUpdate, isOpen, onClose, token }) {
   const [activeTab, setActiveTab] = useState('hero');
   const [isUploading, setIsUploading] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
@@ -90,7 +90,7 @@ export default function AdminPanel({ content, onUpdate, isOpen, onClose }) {
     }
   };
 
-  // Image upload handler
+  // Image upload handler — uploads to Cloudinary via server
   const handleImageUpload = async (e, type) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -102,17 +102,19 @@ export default function AdminPanel({ content, onUpdate, isOpen, onClose }) {
     try {
       const res = await fetch(`${API_BASE}/upload`, {
         method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
         body: formData,
       });
       const data = await res.json();
       if (data.success) {
-        const fullUrl = import.meta.env.PROD ? `https://aurexa-admin.onrender.com${data.url}` : `http://localhost:5002${data.url}`;
+        // Cloudinary returns a full URL, no need to prepend server origin
+        const imageUrl = data.url;
         if (type === 'hero') {
-          setHeroForm((prev) => ({ ...prev, image: fullUrl }));
+          setHeroForm((prev) => ({ ...prev, image: imageUrl }));
         } else if (type === 'about') {
-          setAboutForm((prev) => ({ ...prev, image: fullUrl }));
+          setAboutForm((prev) => ({ ...prev, image: imageUrl }));
         } else if (type === 'project') {
-          setNewProject((prev) => ({ ...prev, image: fullUrl }));
+          setNewProject((prev) => ({ ...prev, image: imageUrl }));
         }
         showNotification('Image uploaded successfully');
       } else {
@@ -131,7 +133,7 @@ export default function AdminPanel({ content, onUpdate, isOpen, onClose }) {
     try {
       const res = await fetch(`${API_BASE}/content`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ hero: heroForm }),
       });
       const data = await res.json();
@@ -152,7 +154,7 @@ export default function AdminPanel({ content, onUpdate, isOpen, onClose }) {
     try {
       const res = await fetch(`${API_BASE}/content`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ about: aboutForm }),
       });
       const data = await res.json();
@@ -173,7 +175,7 @@ export default function AdminPanel({ content, onUpdate, isOpen, onClose }) {
     try {
       const res = await fetch(`${API_BASE}/content`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ contact: contactForm }),
       });
       const data = await res.json();
@@ -194,7 +196,7 @@ export default function AdminPanel({ content, onUpdate, isOpen, onClose }) {
     try {
       const res = await fetch(`${API_BASE}/services`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify(newService),
       });
       const data = await res.json();
@@ -215,6 +217,7 @@ export default function AdminPanel({ content, onUpdate, isOpen, onClose }) {
     try {
       const res = await fetch(`${API_BASE}/services/${id}`, {
         method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
       if (data.success) {
@@ -238,7 +241,7 @@ export default function AdminPanel({ content, onUpdate, isOpen, onClose }) {
     try {
       const res = await fetch(`${API_BASE}/projects`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify(newProject),
       });
       const data = await res.json();
@@ -259,6 +262,7 @@ export default function AdminPanel({ content, onUpdate, isOpen, onClose }) {
     try {
       const res = await fetch(`${API_BASE}/projects/${id}`, {
         method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
       if (data.success) {

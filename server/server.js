@@ -1,230 +1,302 @@
+import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import jwt from 'jsonwebtoken';
 import multer from 'multer';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+import connectDB from './config/db.js';
+import cloudinary from './config/cloudinary.js';
+import auth from './middleware/auth.js';
+import Content from './models/Content.js';
+import Service from './models/Service.js';
+import Project from './models/Project.js';
+import Admin from './models/Admin.js';
 
 const app = express();
 const PORT = process.env.PORT || 5002;
 
+// Connect to MongoDB
+connectDB();
+
+// Middleware
 app.use(cors());
 app.use(express.json());
 
-// Setup database paths
-const DB_PATH = path.join(__dirname, 'db.json');
-
-// Check if we are running in local monorepo or deployed standalone on Render
-const localPublicDir = path.join(__dirname, '..', 'public');
-const UPLOADS_DIR = fs.existsSync(localPublicDir)
-  ? path.join(localPublicDir, 'uploads')
-  : path.join(__dirname, 'uploads');
-
-// Create uploads directory if it does not exist
-if (!fs.existsSync(UPLOADS_DIR)) {
-  fs.mkdirSync(UPLOADS_DIR, { recursive: true });
-}
-
-// Serve uploaded images statically
-app.use('/uploads', express.static(UPLOADS_DIR));
-
-// Helper: Read database
-const readDB = () => {
-  try {
-    const data = fs.readFileSync(DB_PATH, 'utf8');
-    return JSON.parse(data);
-  } catch (err) {
-    console.error('Failed to read db.json:', err);
-    return {};
-  }
-};
-
-// Helper: Write database
-const writeDB = (data) => {
-  try {
-    fs.writeFileSync(DB_PATH, JSON.stringify(data, null, 2), 'utf8');
-    return true;
-  } catch (err) {
-    console.error('Failed to write to db.json:', err);
-    return false;
-  }
-};
-
-// Configure Multer for image uploads
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, UPLOADS_DIR);
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-    cb(null, uniqueSuffix + path.extname(file.originalname));
-  },
-});
-
+// Multer — store in memory buffer (will upload to Cloudinary, not disk)
 const upload = multer({
-  storage,
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
   fileFilter: (req, file, cb) => {
     const allowedTypes = /jpeg|jpg|png|gif|svg|webp/;
-    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-    const mimetype = allowedTypes.test(file.mimetype);
-    if (extname && mimetype) {
+    const extOk = allowedTypes.test(file.originalname.toLowerCase().split('.').pop());
+    const mimeOk = allowedTypes.test(file.mimetype);
+    if (extOk && mimeOk) {
       return cb(null, true);
     }
     cb(new Error('Only images (jpg, png, gif, svg, webp) are allowed'));
   },
 });
 
-// --- API ROUTES ---
+// Helper: Upload buffer to Cloudinary
+const uploadToCloudinary = (fileBuffer, folder = 'aurexa') => {
+  return new Promise((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream(
+      { folder, resource_type: 'image' },
+      (error, result) => {
+        if (error) return reject(error);
+        resolve(result);
+      }
+    );
+    stream.end(fileBuffer);
+  });
+};
 
-// 1. Get all content
-app.get('/api/content', (req, res) => {
-  const db = readDB();
-  res.json(db);
+// --- AUTH ROUTES ---
+
+// Login — returns JWT token
+app.post('/api/auth/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({ success: false, message: 'Email and password are required' });
+    }
+
+    const admin = await Admin.findOne({ email: email.toLowerCase() });
+    if (!admin) {
+      return res.status(401).json({ success: false, message: 'Invalid email or password' });
+    }
+
+    const isMatch = await admin.comparePassword(password);
+    if (!isMatch) {
+      return res.status(401).json({ success: false, message: 'Invalid email or password' });
+    }
+
+    const token = jwt.sign({ id: admin._id }, process.env.JWT_SECRET, {
+      expiresIn: process.env.JWT_EXPIRE || '7d',
+    });
+
+    res.json({
+      success: true,
+      message: 'Login successful',
+      token,
+      admin: { id: admin._id, email: admin.email },
+    });
+  } catch (error) {
+    console.error('Login error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
 });
 
-// 2. Update general section content (Hero, About, Contact info)
-app.post('/api/content', (req, res) => {
-  const db = readDB();
-  const { hero, about, contact } = req.body;
+// Verify token validity
+app.get('/api/auth/verify', auth, (req, res) => {
+  res.json({ success: true, message: 'Token is valid' });
+});
 
-  if (hero) db.hero = { ...db.hero, ...hero };
-  if (about) db.about = { ...db.about, ...about };
-  if (contact) db.contact = { ...db.contact, ...contact };
+// --- PUBLIC CONTENT ROUTES ---
 
-  if (writeDB(db)) {
+// Get all content (public — used by frontend SiteContent)
+app.get('/api/content', async (req, res) => {
+  try {
+    // Fetch content, services, and projects in parallel
+    const [contentDoc, services, projects] = await Promise.all([
+      Content.findOne().lean(),
+      Service.find().lean(),
+      Project.find().lean(),
+    ]);
+
+    // Build response in the same shape as the old db.json
+    const response = {
+      hero: contentDoc?.hero || {},
+      about: contentDoc?.about || {},
+      contact: contentDoc?.contact || {},
+      services: services.map((s) => ({
+        id: s._id.toString(),
+        name: s.name,
+        desc: s.desc,
+        iconType: s.iconType,
+      })),
+      projects: projects.map((p) => ({
+        id: p._id.toString(),
+        name: p.name,
+        category: p.category,
+        tag: p.tag,
+        type: p.type,
+        image: p.image,
+        liveUrl: p.liveUrl,
+      })),
+    };
+
+    res.json(response);
+  } catch (error) {
+    console.error('Failed to fetch content:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch content' });
+  }
+});
+
+// --- PROTECTED CONTENT ROUTES (require JWT) ---
+
+// Update general section content (Hero, About, Contact)
+app.post('/api/content', auth, async (req, res) => {
+  try {
+    const { hero, about, contact } = req.body;
+
+    let contentDoc = await Content.findOne();
+    if (!contentDoc) {
+      contentDoc = new Content({});
+    }
+
+    if (hero) {
+      contentDoc.hero = { ...contentDoc.hero.toObject?.() || contentDoc.hero, ...hero };
+    }
+    if (about) {
+      contentDoc.about = { ...contentDoc.about.toObject?.() || contentDoc.about, ...about };
+    }
+    if (contact) {
+      contentDoc.contact = { ...contentDoc.contact.toObject?.() || contentDoc.contact, ...contact };
+    }
+
+    contentDoc.markModified('hero');
+    contentDoc.markModified('about');
+    contentDoc.markModified('contact');
+    await contentDoc.save();
+
+    // Re-fetch full data to return
+    const [savedContent, services, projects] = await Promise.all([
+      Content.findOne().lean(),
+      Service.find().lean(),
+      Project.find().lean(),
+    ]);
+
+    const db = {
+      hero: savedContent?.hero || {},
+      about: savedContent?.about || {},
+      contact: savedContent?.contact || {},
+      services: services.map((s) => ({ id: s._id.toString(), name: s.name, desc: s.desc, iconType: s.iconType })),
+      projects: projects.map((p) => ({ id: p._id.toString(), name: p.name, category: p.category, tag: p.tag, type: p.type, image: p.image, liveUrl: p.liveUrl })),
+    };
+
     res.json({ success: true, message: 'Content updated successfully', db });
-  } else {
+  } catch (error) {
+    console.error('Failed to update content:', error);
     res.status(500).json({ success: false, message: 'Failed to update content' });
   }
 });
 
-// 3. Upload file API
-app.post('/api/upload', upload.single('image'), (req, res) => {
-  if (!req.file) {
-    return res.status(400).json({ success: false, message: 'No file uploaded' });
+// Upload file to Cloudinary
+app.post('/api/upload', auth, upload.single('image'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'No file uploaded' });
+    }
+
+    const result = await uploadToCloudinary(req.file.buffer, 'aurexa');
+    res.json({ success: true, url: result.secure_url });
+  } catch (error) {
+    console.error('Upload error:', error);
+    res.status(500).json({ success: false, message: 'Failed to upload image' });
   }
-  // Store path relative to root directory (public assets)
-  const relativePath = `/uploads/${req.file.filename}`;
-  res.json({ success: true, url: relativePath });
 });
 
-// 4. Projects: Add project
-app.post('/api/projects', (req, res) => {
-  const db = readDB();
-  const newProject = req.body;
+// --- PROJECTS ---
 
-  if (!newProject.name || !newProject.category) {
-    return res.status(400).json({ success: false, message: 'Name and category are required' });
-  }
+// Add project
+app.post('/api/projects', auth, async (req, res) => {
+  try {
+    const { name, category, tag, type, image, liveUrl } = req.body;
 
-  newProject.id = 'project-' + Date.now();
-  db.projects = db.projects || [];
-  db.projects.push(newProject);
+    if (!name || !category) {
+      return res.status(400).json({ success: false, message: 'Name and category are required' });
+    }
 
-  if (writeDB(db)) {
-    res.json({ success: true, message: 'Project added successfully', project: newProject });
-  } else {
+    const project = await Project.create({ name, category, tag, type, image, liveUrl });
+
+    res.json({
+      success: true,
+      message: 'Project added successfully',
+      project: {
+        id: project._id.toString(),
+        name: project.name,
+        category: project.category,
+        tag: project.tag,
+        type: project.type,
+        image: project.image,
+        liveUrl: project.liveUrl,
+      },
+    });
+  } catch (error) {
+    console.error('Failed to add project:', error);
     res.status(500).json({ success: false, message: 'Failed to save project' });
   }
 });
 
-// 5. Projects: Delete project
-app.delete('/api/projects/:id', (req, res) => {
-  const db = readDB();
-  const projectId = req.params.id;
-
-  const originalLength = db.projects?.length || 0;
-  db.projects = (db.projects || []).filter((p) => p.id !== projectId);
-
-  if (db.projects.length === originalLength) {
-    return res.status(404).json({ success: false, message: 'Project not found' });
-  }
-
-  if (writeDB(db)) {
+// Delete project
+app.delete('/api/projects/:id', auth, async (req, res) => {
+  try {
+    const project = await Project.findByIdAndDelete(req.params.id);
+    if (!project) {
+      return res.status(404).json({ success: false, message: 'Project not found' });
+    }
     res.json({ success: true, message: 'Project deleted successfully' });
-  } else {
+  } catch (error) {
+    console.error('Failed to delete project:', error);
     res.status(500).json({ success: false, message: 'Failed to delete project' });
   }
 });
 
-// 6. Services: Add/Update service
-app.post('/api/services', (req, res) => {
-  const db = readDB();
-  const service = req.body;
+// --- SERVICES ---
 
-  if (!service.name || !service.desc) {
-    return res.status(400).json({ success: false, message: 'Name and description are required' });
-  }
+// Add or update service
+app.post('/api/services', auth, async (req, res) => {
+  try {
+    const { id, name, desc, iconType } = req.body;
 
-  db.services = db.services || [];
+    if (!name || !desc) {
+      return res.status(400).json({ success: false, message: 'Name and description are required' });
+    }
 
-  if (service.id) {
-    // Update existing
-    db.services = db.services.map((s) => (s.id === service.id ? service : s));
-  } else {
-    // Add new
-    service.id = 'service-' + Date.now();
-    db.services.push(service);
-  }
+    let service;
+    if (id) {
+      // Update existing
+      service = await Service.findByIdAndUpdate(id, { name, desc, iconType }, { new: true });
+      if (!service) {
+        return res.status(404).json({ success: false, message: 'Service not found' });
+      }
+    } else {
+      // Create new
+      service = await Service.create({ name, desc, iconType: iconType || 'design' });
+    }
 
-  if (writeDB(db)) {
-    res.json({ success: true, message: 'Service saved successfully', service });
-  } else {
+    res.json({
+      success: true,
+      message: 'Service saved successfully',
+      service: {
+        id: service._id.toString(),
+        name: service.name,
+        desc: service.desc,
+        iconType: service.iconType,
+      },
+    });
+  } catch (error) {
+    console.error('Failed to save service:', error);
     res.status(500).json({ success: false, message: 'Failed to save service' });
   }
 });
 
-// 7. Services: Delete service
-app.delete('/api/services/:id', (req, res) => {
-  const db = readDB();
-  const serviceId = req.params.id;
-
-  const originalLength = db.services?.length || 0;
-  db.services = (db.services || []).filter((s) => s.id !== serviceId);
-
-  if (db.services.length === originalLength) {
-    return res.status(404).json({ success: false, message: 'Service not found' });
-  }
-
-  if (writeDB(db)) {
+// Delete service
+app.delete('/api/services/:id', auth, async (req, res) => {
+  try {
+    const service = await Service.findByIdAndDelete(req.params.id);
+    if (!service) {
+      return res.status(404).json({ success: false, message: 'Service not found' });
+    }
     res.json({ success: true, message: 'Service deleted successfully' });
-  } else {
+  } catch (error) {
+    console.error('Failed to delete service:', error);
     res.status(500).json({ success: false, message: 'Failed to delete service' });
   }
 });
 
-// Admin authentication middleware
-const adminAuth = (req, res, next) => {
-  const authHeader = req.headers['authorization'];
-  if (!authHeader) {
-    res.setHeader('WWW-Authenticate', 'Basic realm="Admin Access"');
-    return res.status(401).send('Authentication required');
-  }
-  const base64Credentials = authHeader.split(' ')[1] || '';
-  const credentials = Buffer.from(base64Credentials, 'base64').toString('utf8');
-  const [email, password] = credentials.split(':');
-  if (email === 'admin@gmail.com' && password === 'admin@123') {
-    return next();
-  }
-  res.setHeader('WWW-Authenticate', 'Basic realm="Admin Access"');
-  return res.status(403).send('Invalid credentials');
-};
-
-// Hidden admin route to update any content in db.json
-app.post('/admin/update', adminAuth, (req, res) => {
-  const updates = req.body; // Expect an object with fields to merge
-  const db = readDB();
-  const newDb = { ...db, ...updates };
-  if (writeDB(newDb)) {
-    return res.json({ success: true, message: 'Database updated', db: newDb });
-  }
-  return res.status(500).json({ success: false, message: 'Failed to write database' });
-});
-
+// Start server
 app.listen(PORT, () => {
-  console.log(`Backend server running on http://localhost:${PORT}`);
+  console.log(`🚀 Backend server running on http://localhost:${PORT}`);
 });

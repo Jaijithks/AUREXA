@@ -1,18 +1,37 @@
 import { useState } from 'react';
 
+const API_BASE = import.meta.env.PROD ? 'https://aurexa-admin.onrender.com/api' : 'http://localhost:5002/api';
+
 export default function LoginForm({ onSuccess }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Hard‑coded admin credentials as per backend
-    if (email === 'admin@gmail.com' && password === 'admin@123') {
-      setError('');
-      onSuccess();
-    } else {
-      setError('Invalid email or password');
+    setError('');
+    setLoading(true);
+
+    try {
+      const res = await fetch(`${API_BASE}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        localStorage.setItem('aurexa_token', data.token);
+        onSuccess(data.token);
+      } else {
+        setError(data.message || 'Invalid email or password');
+      }
+    } catch (err) {
+      setError('Failed to connect to server');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -41,7 +60,9 @@ export default function LoginForm({ onSuccess }) {
             style={styles.input}
           />
         </div>
-        <button type="submit" style={styles.button}>Login</button>
+        <button type="submit" style={styles.button} disabled={loading}>
+          {loading ? 'Logging in...' : 'Login'}
+        </button>
       </form>
     </div>
   );
