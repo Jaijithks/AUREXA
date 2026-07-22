@@ -10,29 +10,33 @@ import Portfolio from '../components/Portfolio';
 import Process from '../components/Process';
 import Contact from '../components/Contact';
 import Footer from '../components/Footer';
+import fallbackContent from '../data/fallbackContent';
 
 const API_BASE = import.meta.env.PROD ? 'https://aurexa-admin.onrender.com/api' : 'http://localhost:5002/api';
 
 export default function SiteContent() {
-  const [content, setContent] = useState(null);
+  const [content, setContent] = useState(fallbackContent);
 
   const fetchContent = useCallback(async () => {
     try {
       const res = await fetch(`${API_BASE}/content`);
+      if (!res.ok) {
+        throw new Error(`HTTP error! status: ${res.status}`);
+      }
       const data = await res.json();
-      setContent(data);
+      if (data && typeof data === 'object' && data.hero && data.about) {
+        setContent(data);
+      } else {
+        console.warn('Received invalid data structure from API, keeping fallback content.');
+      }
     } catch (err) {
-      console.error('Failed to connect to backend API:', err);
+      console.error('Failed to connect to backend API, using fallback content:', err);
     }
   }, []);
 
   useEffect(() => {
     fetchContent();
   }, [fetchContent]);
-
-  if (!content) {
-    return <Loader />;
-  }
 
   return (
     <>
