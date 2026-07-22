@@ -103,6 +103,30 @@ const fallbackContent = {
       "tag": "E-Commerce",
       "name": "Shopily",
       "type": "E-Commerce Website"
+    },
+    {
+      "id": "portfolio-creative",
+      "category": "portfolio",
+      "image": "/assets/images/portfolio-fitness.png",
+      "tag": "Portfolio",
+      "name": "Creative Studio",
+      "type": "Agency Portfolio Website"
+    },
+    {
+      "id": "portfolio-grocery",
+      "category": "ecommerce",
+      "image": "/assets/images/portfolio-ecommerce.png",
+      "tag": "E-Commerce",
+      "name": "FreshCart",
+      "type": "Grocery Delivery Website"
+    },
+    {
+      "id": "portfolio-saas",
+      "category": "business",
+      "image": "/assets/images/portfolio-business.png",
+      "tag": "Business",
+      "name": "SaaS Analytics",
+      "type": "Enterprise Landing Page"
     }
   ],
   "contact": {

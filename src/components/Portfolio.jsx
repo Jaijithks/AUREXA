@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef } from 'react';
+import { Link } from 'react-router-dom';
 import { useScrollReveal } from '../hooks/useScrollReveal';
 
 const smoothScroll = (e, href) => {
@@ -125,6 +126,9 @@ export default function Portfolio({ projects }) {
           >
             Start a Project ↗
           </a>
+          <Link to="/projects" className="btn-secondary-pill">
+            View All Projects ↗
+          </Link>
         </div>
         <div className="controls-right">
           <button
