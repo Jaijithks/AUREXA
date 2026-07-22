@@ -1969,7 +1969,28 @@ footer {
   }
 
   .portfolio-card-overlay {
-    padding: 20px;
+    padding: 12px;
+  }
+
+  .portfolio-card-tag {
+    font-size: 8px !important;
+    padding: 3px 8px !important;
+    margin-bottom: 6px !important;
+  }
+
+  .portfolio-card-name {
+    font-size: 13px !important;
+    margin-bottom: 4px !important;
+    line-height: 1.2 !important;
+  }
+
+  .portfolio-card-type {
+    font-size: 10px !important;
+    margin-bottom: 8px !important;
+  }
+
+  .portfolio-card-link {
+    font-size: 10px !important;
   }
 
   .portfolio-bottom-controls {
