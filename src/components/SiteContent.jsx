@@ -50,7 +50,7 @@ export default function SiteContent() {
       <Navbar />
 
       {/* 01. Hero Section */}
-      <Hero content={content.hero} />
+      <Hero content={content.hero} stats={content.about?.stats} />
 
       {/* Marquee */}
       <Marquee />
