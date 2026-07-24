@@ -1,8 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import fallbackContent from '../data/fallbackContent';
+import Loader from './Loader';
 
 const API_BASE = import.meta.env.PROD ? 'https://aurexa-admin.onrender.com/api' : 'http://localhost:5002/api';
+const API_FALLBACK = 'https://aurexa-admin.onrender.com/api';
 
 const FILTERS = [
   { key: 'all', label: 'All Projects' },
@@ -12,12 +14,24 @@ const FILTERS = [
 ];
 
 export default function AllProjectsPage() {
-  const [projects, setProjects] = useState(fallbackContent.projects);
+  const [projects, setProjects] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState('all');
 
   const fetchContent = useCallback(async () => {
     try {
-      const res = await fetch(`${API_BASE}/content`);
+      let res;
+      try {
+        res = await fetch(`${API_BASE}/content`);
+      } catch (localErr) {
+        if (!import.meta.env.PROD) {
+          console.warn('Failed to fetch from local API on AllProjectsPage, trying production backend...', localErr);
+          res = await fetch(`${API_FALLBACK}/content`);
+        } else {
+          throw localErr;
+        }
+      }
+
       if (!res.ok) {
         throw new Error(`HTTP error! status: ${res.status}`);
       }
@@ -26,7 +40,9 @@ export default function AllProjectsPage() {
         setProjects(data.projects);
       }
     } catch (err) {
-      console.error('Failed to connect to backend API on AllProjectsPage, using fallback projects:', err);
+      console.error('Failed to connect to backend API on AllProjectsPage:', err);
+    } finally {
+      setIsLoading(false);
     }
   }, []);
 
@@ -44,7 +60,9 @@ export default function AllProjectsPage() {
   );
 
   return (
-    <div className="all-projects-page" style={{ padding: '80px 20px', minHeight: '100vh', background: 'var(--white)' }}>
+    <>
+      <Loader isDataLoaded={!isLoading} />
+      <div className="all-projects-page" style={{ padding: '80px 20px', minHeight: '100vh', background: 'var(--white)' }}>
       <div className="container">
         {/* Header Section */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '48px', flexWrap: 'wrap', gap: '20px' }}>
@@ -116,5 +134,6 @@ export default function AllProjectsPage() {
         )}
       </div>
     </div>
+    </>
   );
 }

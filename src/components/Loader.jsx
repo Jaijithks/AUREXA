@@ -1,10 +1,15 @@
 import { useEffect, useState } from 'react';
 
-export default function Loader() {
+export default function Loader({ isDataLoaded = true }) {
   const [revealed, setRevealed] = useState(false);
   const [hidden, setHidden] = useState(false);
 
   useEffect(() => {
+    if (!isDataLoaded) {
+      document.body.style.overflow = 'hidden';
+      return;
+    }
+
     document.body.style.overflow = 'hidden';
 
     const revealTimer = setTimeout(() => {
@@ -21,7 +26,7 @@ export default function Loader() {
       clearTimeout(hideTimer);
       document.body.style.overflow = '';
     };
-  }, []);
+  }, [isDataLoaded]);
 
   if (hidden) return null;
 

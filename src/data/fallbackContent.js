@@ -5,15 +5,9 @@ const fallbackContent = {
     "titleHighlight": "Experiences",
     "titleLine2": "That Drive Results.",
     "subtitle": "We design and develop modern websites that help brands grow online. Clean, fast, and built to convert.",
-    "image": "/assets/images/portfolio-business.png",
-    "statusCard1": {
-      "label": "Project Status",
-      "value": "Launched ✦"
-    },
-    "statusCard2": {
-      "label": "Client Rating",
-      "value": "5.0 / 5.0"
-    }
+    "image": "",
+    "statusCard1": null,
+    "statusCard2": null
   },
   "about": {
     "sectionLabel": "02. About",
@@ -21,114 +15,11 @@ const fallbackContent = {
     "titleHighlight": "Digital Partners.",
     "desc1": "Aurexa is a freelance web design and development studio focused on crafting beautiful, functional and result-driven websites. We help businesses establish a strong online presence with modern, responsive designs.",
     "desc2": "From concept to launch, we work closely with our clients to deliver websites that not only look stunning but also perform exceptionally across all devices.",
-    "image": "/assets/images/portfolio-ecommerce.png",
-    "stats": [
-      {
-        "id": "stat-1",
-        "target": 5,
-        "suffix": "+",
-        "prefix": "",
-        "label": "Projects Completed"
-      },
-      {
-        "id": "stat-2",
-        "target": 100,
-        "suffix": "%",
-        "prefix": "",
-        "label": "Client Satisfaction"
-      },
-      {
-        "id": "stat-3",
-        "target": 2,
-        "suffix": "+",
-        "prefix": "",
-        "label": "Years Experience"
-      },
-      {
-        "id": "stat-4",
-        "target": 0,
-        "suffix": "",
-        "prefix": "Fast",
-        "label": "On-Time Delivery"
-      }
-    ]
+    "image": "",
+    "stats": []
   },
-  "services": [
-    {
-      "id": "service-1",
-      "name": "Web Design",
-      "desc": "Beautiful & modern UI/UX design that captivates visitors and creates memorable digital experiences for your brand.",
-      "iconType": "design"
-    },
-    {
-      "id": "service-2",
-      "name": "Web Development",
-      "desc": "Fast, secure & scalable websites built with modern technologies. Clean code that performs and scales with your business.",
-      "iconType": "dev"
-    },
-    {
-      "id": "service-3",
-      "name": "Responsive Design",
-      "desc": "Perfect on all devices — from desktops to tablets to mobile phones. Your site will look flawless everywhere.",
-      "iconType": "responsive"
-    },
-    {
-      "id": "service-4",
-      "name": "Website Maintenance",
-      "desc": "Ongoing support & updates to keep your website running smoothly, secure, and up-to-date with the latest standards.",
-      "iconType": "maintenance"
-    }
-  ],
-  "projects": [
-    {
-      "id": "portfolio-brandx",
-      "category": "business",
-      "image": "/assets/images/portfolio-business.png",
-      "tag": "Business",
-      "name": "BrandX",
-      "type": "Business Website"
-    },
-    {
-      "id": "portfolio-fitzone",
-      "category": "portfolio",
-      "image": "/assets/images/portfolio-fitness.png",
-      "tag": "Portfolio",
-      "name": "FitZone",
-      "type": "Gym & Fitness Website"
-    },
-    {
-      "id": "portfolio-shopify",
-      "category": "ecommerce",
-      "image": "/assets/images/portfolio-ecommerce.png",
-      "tag": "E-Commerce",
-      "name": "Shopily",
-      "type": "E-Commerce Website"
-    },
-    {
-      "id": "portfolio-creative",
-      "category": "portfolio",
-      "image": "/assets/images/portfolio-fitness.png",
-      "tag": "Portfolio",
-      "name": "Creative Studio",
-      "type": "Agency Portfolio Website"
-    },
-    {
-      "id": "portfolio-grocery",
-      "category": "ecommerce",
-      "image": "/assets/images/portfolio-ecommerce.png",
-      "tag": "E-Commerce",
-      "name": "FreshCart",
-      "type": "Grocery Delivery Website"
-    },
-    {
-      "id": "portfolio-saas",
-      "category": "business",
-      "image": "/assets/images/portfolio-business.png",
-      "tag": "Business",
-      "name": "SaaS Analytics",
-      "type": "Enterprise Landing Page"
-    }
-  ],
+  "services": [],
+  "projects": [],
   "contact": {
     "email": "hello@aurexa.web",
     "phone": "+91 98765 43210",

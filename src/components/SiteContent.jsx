@@ -13,13 +13,26 @@ import Footer from '../components/Footer';
 import fallbackContent from '../data/fallbackContent';
 
 const API_BASE = import.meta.env.PROD ? 'https://aurexa-admin.onrender.com/api' : 'http://localhost:5002/api';
+const API_FALLBACK = 'https://aurexa-admin.onrender.com/api';
 
 export default function SiteContent() {
-  const [content, setContent] = useState(fallbackContent);
+  const [content, setContent] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   const fetchContent = useCallback(async () => {
     try {
-      const res = await fetch(`${API_BASE}/content`);
+      let res;
+      try {
+        res = await fetch(`${API_BASE}/content`);
+      } catch (localErr) {
+        if (!import.meta.env.PROD) {
+          console.warn('Failed to fetch from local API, trying production backend...', localErr);
+          res = await fetch(`${API_FALLBACK}/content`);
+        } else {
+          throw localErr;
+        }
+      }
+
       if (!res.ok) {
         throw new Error(`HTTP error! status: ${res.status}`);
       }
@@ -27,10 +40,14 @@ export default function SiteContent() {
       if (data && typeof data === 'object' && data.hero && data.about) {
         setContent(data);
       } else {
-        console.warn('Received invalid data structure from API, keeping fallback content.');
+        console.warn('Received invalid data structure from API, using fallback content.');
+        setContent(fallbackContent);
       }
     } catch (err) {
       console.error('Failed to connect to backend API, using fallback content:', err);
+      setContent(fallbackContent);
+    } finally {
+      setIsLoading(false);
     }
   }, []);
 
@@ -44,34 +61,38 @@ export default function SiteContent() {
       <CustomCursor />
 
       {/* Cinematic Loader */}
-      <Loader />
+      <Loader isDataLoaded={!isLoading} />
 
-      {/* Navigation */}
-      <Navbar />
+      {content && (
+        <>
+          {/* Navigation */}
+          <Navbar />
 
-      {/* 01. Hero Section */}
-      <Hero content={content.hero} stats={content.about?.stats} />
+          {/* 01. Hero Section */}
+          <Hero content={content.hero} stats={content.about?.stats} />
 
-      {/* Marquee */}
-      <Marquee />
+          {/* Marquee */}
+          <Marquee />
 
-      {/* 02. About Section */}
-      <About content={content.about} />
+          {/* 02. About Section */}
+          <About content={content.about} />
 
-      {/* 03. Services Section */}
-      <Services services={content.services} />
+          {/* 03. Services Section */}
+          <Services services={content.services} />
 
-      {/* 04. Portfolio / Work Section */}
-      <Portfolio projects={content.projects} />
+          {/* 04. Portfolio / Work Section */}
+          <Portfolio projects={content.projects} />
 
-      {/* 05. Process Section */}
-      <Process />
+          {/* 05. Process Section */}
+          <Process />
 
-      {/* 06. Contact Section */}
-      <Contact contact={content.contact} />
+          {/* 06. Contact Section */}
+          <Contact contact={content.contact} />
 
-      {/* Footer */}
-      <Footer />
+          {/* Footer */}
+          <Footer />
+        </>
+      )}
     </>
   );
 }
